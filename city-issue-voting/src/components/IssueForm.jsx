@@ -1,26 +1,34 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 
-const CATEGORIES = ['Roads', 'Sanitation', 'Lighting', 'Safety', 'Drainage', 'Parks', 'Water', 'Other']
+// Lazy-load the map to avoid SSR issues and keep initial bundle small
+const LocationPicker = lazy(() => import('./LocationPicker'))
+
+const CATEGORIES = ['ROAD', 'WATER', 'ELECTRICITY', 'SANITATION', 'PARKS', 'SAFETY', 'OTHER']
+const ALL_TAGS   = ['Road', 'Water', 'Electricity', 'Sanitation', 'Parks', 'Safety', 'Other']
 
 export default function IssueForm({ onSubmit, onCancel }) {
   const [title,    setTitle]    = useState('')
-  const [location, setLocation] = useState('')
-  const [category, setCategory] = useState('Roads')
-  const [image,    setImage]    = useState(null)
-  const [preview,  setPreview]  = useState(null)
+  const [locData,  setLocData]  = useState(null)  // { lat, lng, location, area }
+  const [category, setCategory] = useState('ROAD')
+  const [images,   setImages]   = useState([])
+  const [tags,     setTags]     = useState([])
   const [errors,   setErrors]   = useState({})
 
-  const handleImage = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    setImage(file)
-    setPreview(URL.createObjectURL(file))
+  const handleImages = (e) => {
+    const files = Array.from(e.target.files).slice(0, 5 - images.length)
+    const newImgs = files.map(f => ({ file: f, url: URL.createObjectURL(f) }))
+    setImages(prev => [...prev, ...newImgs].slice(0, 5))
   }
+
+  const removeImage = (idx) => setImages(prev => prev.filter((_, i) => i !== idx))
+
+  const toggleTag = (tag) =>
+    setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
 
   const validate = () => {
     const e = {}
-    if (!title.trim())    e.title    = 'Title is required'
-    if (!location.trim()) e.location = 'Location is required'
+    if (!title.trim())       e.title    = 'Title is required'
+    if (!locData?.location)  e.location = 'Pin a location on the map'
     return e
   }
 
@@ -28,47 +36,81 @@ export default function IssueForm({ onSubmit, onCancel }) {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
-    onSubmit({ title: title.trim(), location: location.trim(), category, image: preview })
+    onSubmit({
+      title:      title.trim(),
+      location:   locData.location,
+      lat:        locData.lat,
+      lng:        locData.lng,
+      category,
+      tags,
+      imageFiles: images.map(i => i.file),
+      images:     images.map(i => i.url),
+      image:      images[0]?.url || null,
+    })
   }
 
   return (
     <form onSubmit={handleSubmit} className="issue-form">
+      {/* Title */}
       <div className="form-group">
         <label>Issue Title *</label>
-        <input
-          className={`input ${errors.title ? 'error' : ''}`}
-          placeholder="e.g. Pothole on 5th Avenue"
-          value={title}
-          onChange={(e) => { setTitle(e.target.value); setErrors(p => ({ ...p, title: '' })) }}
-        />
+        <input className={`input ${errors.title ? 'error' : ''}`}
+          placeholder="e.g. Pothole on 5th Avenue" value={title}
+          onChange={e => { setTitle(e.target.value); setErrors(p => ({ ...p, title: '' })) }} />
         {errors.title && <span className="error-msg">{errors.title}</span>}
       </div>
 
+      {/* Map Location Picker */}
       <div className="form-group">
-        <label>Location *</label>
-        <input
-          className={`input ${errors.location ? 'error' : ''}`}
-          placeholder="e.g. Main Street, Block 4"
-          value={location}
-          onChange={(e) => { setLocation(e.target.value); setErrors(p => ({ ...p, location: '' })) }}
-        />
+        <label>Pin Location * <span style={{ color: 'var(--muted2)', textTransform: 'none', fontWeight: 400 }}>— drag pin or click map</span></label>
+        <Suspense fallback={<div className="map-loading">Loading map…</div>}>
+          <LocationPicker
+            value={locData}
+            onChange={(data) => { setLocData(data); setErrors(p => ({ ...p, location: '' })) }}
+          />
+        </Suspense>
         {errors.location && <span className="error-msg">{errors.location}</span>}
       </div>
 
+      {/* Category */}
       <div className="form-group">
         <label>Category</label>
         <select className="input" value={category} onChange={e => setCategory(e.target.value)}>
-          {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+          {CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0) + c.slice(1).toLowerCase()}</option>)}
         </select>
       </div>
 
+      {/* Tags */}
       <div className="form-group">
-        <label>Image (optional)</label>
-        <label className="file-upload">
-          📷 {image ? image.name : 'Choose image'}
-          <input type="file" accept="image/*" onChange={handleImage} hidden />
-        </label>
-        {preview && <img src={preview} alt="preview" className="img-preview" />}
+        <label>Tags</label>
+        <div className="tag-row">
+          {ALL_TAGS.map(t => (
+            <button key={t} type="button"
+              className={`tag-chip-btn ${tags.includes(t) ? 'active' : ''}`}
+              onClick={() => toggleTag(t)}>{t}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Images */}
+      <div className="form-group">
+        <label>Images (up to 5)</label>
+        {images.length < 5 && (
+          <label className="file-upload">
+            📷 Add images ({images.length}/5)
+            <input type="file" accept="image/*" multiple onChange={handleImages} hidden />
+          </label>
+        )}
+        {images.length > 0 && (
+          <div className="thumb-strip">
+            {images.map((img, i) => (
+              <div key={i} className="thumb-wrap">
+                <img src={img.url} alt={`img ${i+1}`} className="thumb" />
+                <button type="button" className="thumb-remove" onClick={() => removeImage(i)}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="modal-actions">

@@ -1,0 +1,25 @@
+version: '3.9'
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: cityvoice
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    ports: ["5433:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  api:
+    build: .
+    ports: ["4000:4000"]
+    env_file: .env
+    depends_on: [db, redis]
+    volumes: [./src:/app/src]
+    command: npx tsx watch src/index.ts
+
+volumes:
+  pgdata:

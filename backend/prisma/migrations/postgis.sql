@@ -1,0 +1,20 @@
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+ALTER TABLE "Issue" ADD COLUMN IF NOT EXISTS geom geometry(Point, 4326);
+
+CREATE INDEX IF NOT EXISTS issue_geom_idx ON "Issue" USING GIST (geom);
+
+CREATE OR REPLACE FUNCTION sync_issue_geom()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.lat IS NOT NULL AND NEW.lng IS NOT NULL THEN
+    NEW.geom = ST_SetSRID(ST_MakePoint(NEW.lng, NEW.lat), 4326);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS issue_geom_sync ON "Issue";
+CREATE TRIGGER issue_geom_sync
+  BEFORE INSERT OR UPDATE ON "Issue"
+  FOR EACH ROW EXECUTE FUNCTION sync_issue_geom();

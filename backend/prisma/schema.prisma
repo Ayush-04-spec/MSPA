@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String?        @unique
+  phone         String?        @unique
+  googleId      String?        @unique
+  aadhaarHash   String?        @unique
+  passwordHash  String?
+  name          String
+  role          Role           @default(CITIZEN)
+  fcmToken      String?
+  createdAt     DateTime       @default(now())
+  issues        Issue[]
+  votes         Vote[]
+  comments      Comment[]
+  refreshTokens RefreshToken[]
+}
+
+enum Role {
+  CITIZEN
+  ADMIN
+  MLA
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Issue {
+  id            String        @id @default(uuid())
+  title         String
+  description   String?
+  location      String
+  lat           Float?
+  lng           Float?
+  category      Category
+  tags          String[]
+  images        String[]
+  status        IssueStatus   @default(OPEN)
+  voteScore     Int           @default(0)
+  priorityScore Float         @default(0)
+  authorId      String
+  resolvedById  String?
+  duplicateOf   String?
+  deletedAt     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  author        User          @relation(fields: [authorId], references: [id])
+  votes         Vote[]
+  comments      Comment[]
+  statusHistory StatusEvent[]
+}
+
+enum Category {
+  ROAD
+  WATER
+  ELECTRICITY
+  SANITATION
+  PARKS
+  SAFETY
+  OTHER
+}
+
+enum IssueStatus {
+  OPEN
+  UNDER_REVIEW
+  IN_PROGRESS
+  RESOLVED
+}
+
+model StatusEvent {
+  id        String      @id @default(uuid())
+  issueId   String
+  from      IssueStatus
+  to        IssueStatus
+  changedBy String
+  mlaId     String?
+  note      String?
+  createdAt DateTime    @default(now())
+  issue     Issue       @relation(fields: [issueId], references: [id], onDelete: Cascade)
+}
+
+model Vote {
+  id        String   @id @default(uuid())
+  issueId   String
+  userId    String
+  value     Int
+  createdAt DateTime @default(now())
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, userId])
+}
+
+model Comment {
+  id        String    @id @default(uuid())
+  issueId   String
+  authorId  String
+  text      String
+  parentId  String?
+  createdAt DateTime  @default(now())
+  issue     Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id])
+  parent    Comment?  @relation("replies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("replies")
+}
+
+model MlaScore {
+  mlaId         String   @id
+  resolvedCount Int      @default(0)
+  impactPoints  Int      @default(0)
+  updatedAt     DateTime @updatedAt
+}
+
+model FlaggedIssue {
+  id        String   @id @default(uuid())
+  issueId   String   @unique
+  reason    String
+  flaggedBy String
+  reviewed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model FailedNotification {
+  id        String   @id @default(uuid())
+  jobData   Json
+  error     String
+  createdAt DateTime @default(now())
+}

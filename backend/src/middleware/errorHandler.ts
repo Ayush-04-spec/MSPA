@@ -1,0 +1,17 @@
+import { Request, Response, NextFunction } from 'express'
+import { ZodError } from 'zod'
+
+export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction): void {
+  if (err instanceof ZodError) {
+    res.status(422).json({
+      error: { code: 'VALIDATION_ERROR', message: 'Invalid input', details: err.flatten().fieldErrors },
+    })
+    return
+  }
+  if (err instanceof Error) {
+    console.error('[Error]', err.message)
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } })
+    return
+  }
+  res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Unknown error' } })
+}

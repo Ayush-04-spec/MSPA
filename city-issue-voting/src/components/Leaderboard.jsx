@@ -1,102 +1,113 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect, forwardRef } from 'react'
+import { gsap } from 'gsap'
+import SparkLine from './SparkLine'
+import CivicCredits from './CivicCredits'
+import { useAuth } from '../AuthContext'
+
+// Generate fake velocity sparkline data per MLA
+function velocityData(seed) {
+  return Array.from({ length: 10 }, (_, i) => Math.max(0, Math.round(seed * Math.sin(i * 0.8 + seed) + seed + 2)))
+}
 
 export default function Leaderboard({ issues, mlaList }) {
-  const stats = mlaList.map((mla) => {
-    const resolved   = issues.filter(i => i.resolved && i.resolvedBy === mla.id)
-    const totalVotes = resolved.reduce((s, i) => s + i.votes, 0)
-    return { ...mla, resolved: resolved.length, totalVotes, issues: resolved }
+  const { user } = useAuth()
+
+  const stats = (Array.isArray(mlaList) && mlaList.length > 0 ? mlaList : []).map((mla, idx) => {
+    const resolved   = issues.filter(i => (i.resolved || i.status === 'resolved') && i.resolvedBy === mla.id)
+    const totalVotes = resolved.reduce((s, i) => s + (i.votes || 0), 0)
+    return { ...mla, resolved: resolved.length, totalVotes, issues: resolved, sparkData: velocityData(idx + 2) }
   }).sort((a, b) => b.resolved - a.resolved || b.totalVotes - a.totalVotes)
 
-  const medals    = ['🥇', '🥈', '🥉']
+  const medals      = ['🥇', '🥈', '🥉']
   const maxResolved = stats[0]?.resolved || 1
+  const cardsRef    = useRef([])
+
+  useEffect(() => {
+    const els = cardsRef.current.filter(Boolean)
+    if (els.length === 0) return
+    gsap.fromTo(els,
+      { opacity: 0, y: 44, scale: 0.94 },
+      { opacity: 1, y: 0,  scale: 1, duration: 0.55, stagger: 0.1, ease: 'back.out(1.5)' }
+    )
+  }, [stats.length])
 
   return (
     <div className="leaderboard">
       <div className="lb-header">
-        <h2>🏆 MLA Performance Leaderboard</h2>
-        <p className="lb-sub">Ranked by number of city issues resolved</p>
+        <h2>🏆 Hall of Impact</h2>
+        <p className="lb-sub">Ranked by issues resolved · Resolution velocity sparkline shown per MLA</p>
       </div>
+
+      {user && (
+        <div style={{ marginBottom: 24 }}>
+          <CivicCredits user={user} issues={issues} />
+        </div>
+      )}
+
       <div className="lb-cards">
         {stats.map((mla, idx) => (
-          <LbCard key={mla.id} mla={mla} idx={idx} medal={medals[idx]} maxResolved={maxResolved} />
+          <LbCard
+            key={mla.id ?? idx}
+            mla={mla} idx={idx}
+            medal={medals[idx]}
+            maxResolved={maxResolved}
+            ref={el => cardsRef.current[idx] = el}
+          />
         ))}
+        {stats.length === 0 && (
+          <div className="empty" style={{ gridColumn: '1/-1' }}>
+            <span>🏛️</span><p>No leaderboard data yet.</p>
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
-function LbCard({ mla, idx, medal, maxResolved }) {
-  const [tilt, setTilt]       = useState({ x: 0, y: 0 })
-  const [hovered, setHovered] = useState(false)
-  const ref = useRef(null)
-
-  const onMouseMove = (e) => {
-    const rect = ref.current.getBoundingClientRect()
-    const dx = (e.clientX - rect.left - rect.width  / 2) / (rect.width  / 2)
-    const dy = (e.clientY - rect.top  - rect.height / 2) / (rect.height / 2)
-    setTilt({ x: dy * -5, y: dx * 5 })
-  }
-
-  const cardStyle = {
-    transform: `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateZ(${hovered ? 6 : 0}px)`,
-    boxShadow: hovered
-      ? idx === 0
-        ? '0 20px 48px rgba(0,0,0,0.5), 0 0 40px rgba(245,158,11,0.2)'
-        : '0 16px 36px rgba(0,0,0,0.4), 0 0 20px rgba(91,124,250,0.12)'
-      : '0 4px 16px rgba(0,0,0,0.25)',
-  }
-
-  const shineStyle = {
-    background: `radial-gradient(circle at ${50 + tilt.y * 6}% ${50 + tilt.x * 6}%, rgba(255,255,255,0.07) 0%, transparent 65%)`,
-    opacity: hovered ? 1 : 0,
-  }
-
+const LbCard = forwardRef(function LbCard({ mla, idx, medal, maxResolved }, ref) {
   return (
-    <div
-      ref={ref}
-      className={`lb-card ${idx === 0 ? 'top' : ''}`}
-      style={cardStyle}
-      onMouseMove={onMouseMove}
-      onMouseLeave={() => { setTilt({ x: 0, y: 0 }); setHovered(false) }}
-      onMouseEnter={() => setHovered(true)}
-    >
-      <div className="card-shine" style={shineStyle} />
-
-      <div className="lb-rank">
-        {idx < 3 ? medal : <span className="rank-num">#{idx + 1}</span>}
-      </div>
-
-      <div className="lb-avatar-wrap">
-        <div className="lb-avatar">{mla.avatar}</div>
-        {idx === 0 && <div className="lb-avatar-glow" />}
-      </div>
-
-      <div className="lb-info">
-        <p className="lb-name">{mla.name}</p>
-        <p className="lb-constituency">📍 {mla.constituency}</p>
-      </div>
-
-      <div className="lb-stats">
-        <div className="lb-stat-item">
-          <span className="lb-big">{mla.resolved}</span>
-          <span className="lb-label">Resolved</span>
+    <div ref={ref} className={`lb-card ${idx === 0 ? 'top' : ''}`}>
+      <div className="lb-card-inner">
+        <div className="lb-rank">
+          {idx < 3 ? medal : <span className="rank-num">#{idx + 1}</span>}
         </div>
-        <div className="lb-stat-item">
-          <span className="lb-big votes">{mla.totalVotes}</span>
-          <span className="lb-label">Impact pts</span>
+        <div className="lb-avatar-wrap">
+          <div className="lb-avatar">{mla.avatar ?? '👤'}</div>
+          {idx === 0 && <div className="lb-avatar-glow" />}
         </div>
+        <div className="lb-info">
+          <p className="lb-name">{mla.name}</p>
+          <p className="lb-constituency">📍 {mla.constituency ?? mla.ward ?? '—'}</p>
+        </div>
+        <div className="lb-stats">
+          <div className="lb-stat-item">
+            <span className="lb-big">{mla.resolved ?? mla.resolvedCount ?? 0}</span>
+            <span className="lb-label">Resolved</span>
+          </div>
+          <div className="lb-stat-item">
+            <span className="lb-big votes">{mla.totalVotes ?? mla.impactPoints ?? 0}</span>
+            <span className="lb-label">Impact</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Resolution Velocity Sparkline */}
+      <div className="lb-sparkline-row">
+        <span className="lb-spark-label">Resolution velocity</span>
+        <SparkLine data={mla.sparkData} color={idx === 0 ? '#4A78E0' : '#5A6473'} />
       </div>
 
       <div className="lb-bar-wrap">
-        <div className="lb-bar" style={{ width: `${mla.resolved === 0 ? 4 : (mla.resolved / maxResolved) * 100}%` }} />
+        <div className="lb-bar"
+          style={{ width: `${(mla.resolved ?? 0) === 0 ? 4 : ((mla.resolved ?? 0) / maxResolved) * 100}%` }} />
       </div>
 
-      {mla.issues.length > 0 && (
+      {mla.issues?.length > 0 && (
         <ul className="lb-issue-list">
           {mla.issues.map(i => <li key={i.id}>✅ {i.title}</li>)}
         </ul>
       )}
-      {mla.resolved === 0 && <p className="lb-none">No issues resolved yet</p>}
+      {(mla.resolved ?? 0) === 0 && <p className="lb-none">No issues resolved yet</p>}
     </div>
   )
-}
+})

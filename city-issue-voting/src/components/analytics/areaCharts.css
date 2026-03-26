@@ -1,0 +1,92 @@
+.area-section { margin-top: 32px; }
+
+.area-section-heading {
+  font-size: 1.1rem; font-weight: 800; margin-bottom: 6px;
+  background: linear-gradient(135deg, #F4F6FA, #4A78E0);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.area-section-sub {
+  font-size: 0.82rem;
+  color: #8892b0;
+  margin-bottom: 20px;
+}
+
+.area-panel {
+  background: rgba(13,15,20,0.80);
+  border: 1px solid rgba(90,100,115,0.4);
+  border-radius: 16px; padding: 24px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.35), 0 0 0 1px rgba(74,120,224,0.06);
+  display: flex; flex-direction: column; gap: 32px;
+}
+
+/* chart wrapper — needed for tooltip positioning */
+.chart-wrap {
+  position: relative;
+}
+
+.chart-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 10px;
+}
+
+/* tooltip */
+.area-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(10,12,24,0.95);
+  border: 1px solid #2a3158;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  color: #e2e8f0;
+  line-height: 1.6;
+  white-space: nowrap;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+  display: none;
+}
+.area-tooltip.visible { display: block; }
+.area-tooltip strong { color: #7aa3f5; }
+
+/* legend */
+.cat-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  background: rgba(255,255,255,0.03);
+  user-select: none;
+}
+.legend-item:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); }
+.legend-item.hidden { opacity: 0.3; filter: grayscale(1); }
+.legend-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+/* placeholder */
+.area-placeholder {
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+.area-placeholder span { font-size: 2.5rem; display: block; margin-bottom: 10px; }

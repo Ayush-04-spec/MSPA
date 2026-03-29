@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import IssueList from '../components/IssueList'
 import IssueForm from '../components/IssueForm'
-import CityGlobe from '../components/CityGlobe'
 import LoginModal from '../components/LoginModal'
 import { useAuth } from '../AuthContext'
 import { useIssues } from '../IssuesContext'
@@ -11,21 +11,21 @@ const ALL_TAGS = ['Road', 'Water', 'Electricity', 'Sanitation', 'Parks', 'Safety
 
 const pageVariants = {
   initial: { opacity: 0, y: 28, filter: 'blur(6px)' },
-  animate: { opacity: 1, y: 0,  filter: 'blur(0px)', transition: { duration: 0.45, ease: [0.23,1,0.32,1] } },
-  exit:    { opacity: 0, y: -16, filter: 'blur(4px)', transition: { duration: 0.25 } },
+  animate: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.45, ease: [0.23, 1, 0.32, 1] } },
+  exit: { opacity: 0, y: -16, filter: 'blur(4px)', transition: { duration: 0.25 } },
 }
 
 export default function Frontline() {
   const { user, isAdmin } = useAuth()
   const { issues, loadingIssues, nextCursor, apiError, globePulse, fetchIssues, addIssue, vote, updateStatus, addComment } = useIssues()
 
-  const [sortBy,          setSortBy]          = useState('votes')
-  const [filter,          setFilter]          = useState('all')
-  const [search,          setSearch]          = useState('')
+  const [sortBy, setSortBy] = useState('votes')
+  const [filter, setFilter] = useState('all')
+  const [search, setSearch] = useState('')
   const [searchDebounced, setSearchDebounced] = useState('')
-  const [activeTags,      setActiveTags]      = useState([])
-  const [showForm,        setShowForm]        = useState(false)
-  const [showLogin,       setShowLogin]       = useState(false)
+  const [activeTags, setActiveTags] = useState([])
+  const [showForm, setShowForm] = useState(false)
+  const [showLogin, setShowLogin] = useState(false)
   const searchTimer = useRef(null)
 
   // listen for global "open report form" event from header button
@@ -59,7 +59,7 @@ export default function Frontline() {
 
   const handleVote = async (id, dir) => {
     if (!user) { setShowLogin(true); return }
-    try { await vote(id, dir) } catch {}
+    try { await vote(id, dir) } catch { }
   }
 
   const handleComment = async (issueId, text, parentId) => {
@@ -76,7 +76,6 @@ export default function Frontline() {
 
   return (
     <motion.div variants={pageVariants} initial="initial" animate="animate" exit="exit">
-      <CityGlobe pulse={globePulse} />
 
       <div className="search-bar-wrap">
         <input type="search" className="input search-input"
@@ -97,8 +96,8 @@ export default function Frontline() {
       <div className="controls">
         <div className="filters">
           {[
-            { key: 'all',      label: 'All',      icon: '📌' },
-            { key: 'open',     label: 'Open',     icon: '🔴' },
+            { key: 'all', label: 'All', icon: '📌' },
+            { key: 'open', label: 'Open', icon: '🔴' },
             { key: 'resolved', label: 'Resolved', icon: '✅' },
           ].map(({ key, label, icon }) => (
             <button key={key} className={`filter-btn ${filter === key ? 'active' : ''}`}
@@ -107,7 +106,7 @@ export default function Frontline() {
         </div>
         <div className="sort">
           <span>Sort:</span>
-          <button className={`filter-btn ${sortBy === 'votes'  ? 'active' : ''}`} onClick={() => setSortBy('votes')}>🔥 Urgent</button>
+          <button className={`filter-btn ${sortBy === 'votes' ? 'active' : ''}`} onClick={() => setSortBy('votes')}>🔥 Urgent</button>
           <button className={`filter-btn ${sortBy === 'newest' ? 'active' : ''}`} onClick={() => setSortBy('newest')}>🕐 Newest</button>
         </div>
       </div>
@@ -137,16 +136,20 @@ export default function Frontline() {
         )}
       </main>
 
-      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
+      {showLogin && createPortal(
+        <LoginModal onClose={() => setShowLogin(false)} />,
+        document.body
+      )}
 
-      {showForm && (
+      {showForm && createPortal(
         <div className="modal-overlay" onClick={() => setShowForm(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-icon">📝</div>
             <h2>Report an Issue</h2>
             <IssueForm onSubmit={handleAddIssue} onCancel={() => setShowForm(false)} />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </motion.div>
   )

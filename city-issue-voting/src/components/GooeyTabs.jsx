@@ -6,7 +6,7 @@ export default function GooeyTabs({ tabs, activeTab, onChange }) {
 
   useEffect(() => {
     const idx = tabs.findIndex(t => t.key === activeTab)
-    const el  = tabRefs.current[idx]
+    const el = tabRefs.current[idx]
     if (el) setIndicator({ left: el.offsetLeft, width: el.offsetWidth })
   }, [activeTab, tabs])
 

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef } from 'react'  
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import GlobeHero from './components/GlobeHero'

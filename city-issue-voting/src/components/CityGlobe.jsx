@@ -4,7 +4,7 @@ import { Sphere, MeshDistortMaterial, OrbitControls, Stars } from '@react-three/
 
 function MapPin({ pulse }) {
   const groupRef = useRef()
-  const glowRef  = useRef()
+  const glowRef = useRef()
 
   useFrame((state) => {
     if (!groupRef.current) return
@@ -33,9 +33,9 @@ function MapPin({ pulse }) {
         />
       </Sphere>
 
-      {/* Wireframe overlay — Steel Gray */}
+      {/* Wireframe overlay — Steel Gray 0.2 opacity */}
       <Sphere args={[0.57, 20, 20]}>
-        <meshBasicMaterial color="#5A6473" wireframe transparent opacity={0.18} />
+        <meshBasicMaterial color="#5A6473" wireframe transparent opacity={0.2} />
       </Sphere>
 
       {/* Soft White aura pulse */}
@@ -67,11 +67,13 @@ function CityMarkers() {
 
 export default function CityGlobe({ pulse = false }) {
   return (
-    <div style={{ width: '100%', height: 200, borderRadius: 14, overflow: 'hidden', marginBottom: 22,
-      border: '1px solid rgba(90,100,115,0.3)', background: 'rgba(13,15,20,0.6)' }}>
+    <div style={{
+      width: '100%', height: 200, borderRadius: 14, overflow: 'hidden', marginBottom: 22,
+      border: '1px solid rgba(90,100,115,0.3)', background: 'rgba(13,15,20,0.6)'
+    }}>
       <Canvas camera={{ position: [0, 0, 2.6], fov: 45 }}>
         <ambientLight intensity={0.3} />
-        <pointLight position={[4, 4, 4]}  intensity={1.5} color="#4A78E0" />
+        <pointLight position={[4, 4, 4]} intensity={1.5} color="#4A78E0" />
         <pointLight position={[-4, -3, -4]} intensity={0.5} color="#F4F6FA" />
         <Stars radius={80} depth={50} count={1000} factor={2.5} fade speed={0.4} />
         <MapPin pulse={pulse} />

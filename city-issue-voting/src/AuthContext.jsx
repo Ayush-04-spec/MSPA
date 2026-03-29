@@ -9,7 +9,7 @@ export function AuthProvider({ children }) {
 
   // try to restore session on mount
   useEffect(() => {
-    const timeout = setTimeout(() => setLoading(false), 3000) // give up after 3s if backend is down
+    const timeout = setTimeout(() => setLoading(false), 1000) // give up after 1s if backend is down
     auth.refresh()
       .then(ok => ok ? auth.me() : null)
       .then(u => { if (u) setUser(u) })
